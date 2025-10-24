@@ -26,22 +26,16 @@ def get_title45_pdf_links():
     for link in article_links:
         href = link.get('href')
         
-        # Check if it's a PDF link
-        if href.endswith('.pdf'):
-            full_url = urljoin(base_url, href)
-            pdf_links.append({
-                'url': full_url,
-                'title': link.get_text(strip=True),
-                'filename': os.path.basename(full_url)
-            })
         # Check if it's an article/chapter page (HTML)
-        elif href.endswith('.html') and '45-' in href:
-            # Visit the article page to find chapter PDFs
-            article_url = urljoin(base_url + 'html/', href)
+        #Only visit links that are HTML pages and part of Title 45
+        if href.endswith('.html') and '45-' in href:
+            #Visit the article page to find chapter PDFs
+            article_url = urljoin(base_url + 'html/', href) # This resolves correctly
             print(f"Checking article page: {article_url}")
-            
+                       
             try:
                 article_response = requests.get(article_url)
+                article_response.raise_for_status() # Check for 4xx/5xx errors
                 article_soup = BeautifulSoup(article_response.content, 'html.parser')
                 
                 # Find PDF links on this article page
@@ -49,7 +43,8 @@ def get_title45_pdf_links():
                 for pdf_link in article_pdf_links:
                     pdf_href = pdf_link.get('href')
                     if pdf_href.endswith('.pdf'):
-                        full_pdf_url = urljoin(article_url, pdf_href)
+                        full_pdf_url = urljoin(base_url, pdf_href)
+                        
                         pdf_links.append({
                             'url': full_pdf_url,
                             'title': pdf_link.get_text(strip=True),
@@ -58,7 +53,7 @@ def get_title45_pdf_links():
                 
                 # Be polite to the server
                 time.sleep(0.5)
-            except Exception as e:
+            except requests.exceptions.RequestException as e: # Be more specific
                 print(f"Error fetching {article_url}: {e}")
     
     return pdf_links
